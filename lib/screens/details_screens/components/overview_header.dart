@@ -90,7 +90,19 @@ class OverviewHeader extends ConsumerWidget {
 
     final streamHeight = 43.0;
 
+    final mediaStream = mediaStreamHelper?.mediaStream;
+    // Streamed versions (Gelato) are not probed until they are played, so they have no
+    // audio/subtitle tracks yet: show the version picker on its own in that case.
+    final showVersions = (mediaStream?.versionStreams.length ?? 0) > 1 || (mediaStream?.isNotEmpty ?? false);
+    final showAudio = mediaStream?.audioStreams.isNotEmpty ?? false;
+    final showSubs = mediaStream?.subStreams.isNotEmpty ?? false;
+    final currentVersion = mediaStream?.currentVersionStream;
+    final versionLabel = currentVersion == null
+        ? ""
+        : (currentVersion.videoStreams.isEmpty ? currentVersion.name : currentVersion.detailedResolutionLabel);
+
     final streamOptionsButtons = [
+      if (showVersions)
       SizedBox(
         height: streamHeight,
         child: EnumBox(
@@ -107,8 +119,13 @@ class OverviewHeader extends ConsumerWidget {
                 IconsaxPlusLinear.video_square,
                 color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
-              Text(
-                mediaStreamHelper?.mediaStream.currentVersionStream?.detailedResolutionLabel ?? "",
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Text(
+                  versionLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -126,6 +143,7 @@ class OverviewHeader extends ConsumerWidget {
               .toList(),
         ),
       ),
+      if (showAudio)
       SizedBox(
         height: streamHeight,
         child: EnumBox(
@@ -161,6 +179,7 @@ class OverviewHeader extends ConsumerWidget {
               .toList(),
         ),
       ),
+      if (showSubs)
       SizedBox(
         height: streamHeight,
         child: EnumBox(

@@ -153,7 +153,7 @@ class _ItemDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     studios: details.overview.studios,
                     officialRating: details.overview.parentalRating,
                     communityRating: details.overview.communityRating,
-                    mediaStreamHelper: details.mediaStreams.isNotEmpty
+                    mediaStreamHelper: details.mediaStreams.isNotEmpty || details.mediaStreams.versionStreams.length > 1
                         ? MediaStreamHelper(
                             mediaStream: details.mediaStreams,
                             onItemChanged: (changed) {
