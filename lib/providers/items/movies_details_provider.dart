@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:chopper/chopper.dart';
@@ -88,9 +89,44 @@ class MovieDetails extends _$MovieDetails {
             seerrUrl: seerrUrl,
           ),
           specialFeatures: specialFeatureModel);
+
+      unawaited(_waitForRemoteVersions(item.id, newState.path));
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Gelato (Stremio addons in Jellyfin) only looks up the versions of a streamed movie the
+  /// first time it is opened, which can take several seconds. Keep asking the server for the
+  /// item until its versions show up, so the version picker appears without a manual refresh.
+  Future<void> _waitForRemoteVersions(String itemId, String? path) async {
+    // Local files have a plain file path; Gelato items use gelato:// stubs, stream URLs or
+    // stub files under the Gelato library folders.
+    final lower = path?.toLowerCase() ?? '';
+    final isRemote = lower.isEmpty ||
+        lower.contains('gelato') ||
+        lower.startsWith('http') ||
+        lower.contains('stub') ||
+        lower.contains('tmdb:');
+    if (!isRemote) return;
+
+    for (var attempt = 0; attempt < 15; attempt++) {
+      try {
+        if ((state?.mediaStreams.versionStreams.length ?? 0) > 1) return;
+        await Future.delayed(const Duration(seconds: 2));
+        final response = await api.usersUserIdItemsItemIdGet(itemId: itemId);
+        final refreshed = response.body as MovieModel?;
+        if (refreshed == null) continue;
+        final current = state;
+        if (current == null) return;
+        if (refreshed.mediaStreams.versionStreams.length > current.mediaStreams.versionStreams.length) {
+          state = current.copyWith(mediaStreams: refreshed.mediaStreams);
+        }
+      } catch (e) {
+        log("Waiting for Gelato versions of $itemId failed: $e", level: logging.Level.WARNING.value);
+        return;
+      }
     }
   }
 

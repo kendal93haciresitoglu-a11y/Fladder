@@ -1,0 +1,74 @@
+name: Build perso (Windows + Android)
+
+on:
+  push:
+    branches:
+      - perso
+  workflow_dispatch:
+
+concurrency:
+  group: build-perso-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.1
+
+      - name: Flutter version
+        id: fvm
+        run: echo "flutter_version=$(jq -r '.flutter' .fvmrc)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+
+      - uses: subosito/flutter-action@v2.19.0
+        with:
+          channel: "stable"
+          flutter-version: ${{ steps.fvm.outputs.flutter_version }}
+          cache: true
+
+      - run: flutter pub get
+
+      # "development" flavor = separate app id (nl.jknaapen.fladder.dev), so it installs next to
+      # the official Fladder instead of clashing with it.
+      - name: Build APK
+        run: flutter build apk --release --build-number=${{ github.run_number }} --flavor development
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-development-release.apk Fladder-perso.apk
+
+      - uses: actions/upload-artifact@v4.0.0
+        with:
+          name: Fladder-perso-android
+          path: Fladder-perso.apk
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4.1.1
+
+      - name: Flutter version
+        id: fvm
+        shell: bash
+        run: echo "flutter_version=$(jq -r '.flutter' .fvmrc)" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2.19.0
+        with:
+          channel: "stable"
+          flutter-version: ${{ steps.fvm.outputs.flutter_version }}
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --build-number=${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4.0.0
+        with:
+          name: Fladder-perso-windows
+          path: build\windows\x64\runner\Release\

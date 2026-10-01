@@ -78,6 +78,13 @@ android {
     }
 
     signingConfigs {
+        // Personal builds: a fixed key kept in the repo so each new APK installs over the last one.
+        perso {
+            storeFile file('perso.keystore')
+            storePassword 'fladderperso'
+            keyAlias 'perso'
+            keyPassword 'fladderperso'
+        }
         release {
             storeFile file('keystore.jks')
             keyAlias keystoreProperties['keyAlias']
@@ -90,7 +97,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            signingConfig signingConfigs.release
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.perso
 
             packagingOptions {
                 resources {
