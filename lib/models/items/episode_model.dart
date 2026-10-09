@@ -76,6 +76,11 @@ class EpisodeModel extends ItemStreamModel with EpisodeModelMappable {
   EpisodeStatus get status {
     return switch (location) {
       ItemLocation.filesystem => EpisodeStatus.available,
+      // Streamed episodes (Gelato) have no file: Jellyfin reports them as remote items.
+      ItemLocation.remote => EpisodeStatus.available,
+      // Gelato reports an episode it has not looked up yet as virtual, but with a stream source;
+      // a real missing episode has no source at all.
+      ItemLocation.virtual when mediaStreams.versionStreams.isNotEmpty => EpisodeStatus.available,
       ItemLocation.virtual =>
         (dateAired?.isBefore(DateTime.now()) == true) ? EpisodeStatus.missing : EpisodeStatus.unaired,
       _ => EpisodeStatus.missing
